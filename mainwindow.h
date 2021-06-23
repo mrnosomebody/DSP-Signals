@@ -42,6 +42,7 @@ private slots:
     void on_actionModeling_triggered();
 
 private:
+    bool modelingFlag;
     QDialog* modelingDialog;
     QFormLayout *modelingLayout;
     int createdSamplesNumber;
