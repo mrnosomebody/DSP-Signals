@@ -7,6 +7,7 @@
 #include <Qt>
 #include <QScrollBar>
 #include <QMessageBox>
+#include <cmath>
 
 
 int counter = 0;
@@ -344,41 +345,40 @@ void MainWindow::ResetRange(){
 
 void MainWindow::on_actionModeling_triggered()
 {
-    QDialog dlg(this);
-    dlg.setWindowTitle(tr("Set data for modeling"));
 
-    QLineEdit *ledit1 = new QLineEdit(&dlg);
-    QLineEdit *ledit2 = new QLineEdit(&dlg);
 
-    QDialogButtonBox *btn_box = new QDialogButtonBox(&dlg);
+    dlg = new QDialog(this);
+    dlg->setWindowTitle(tr("Set data for modeling"));
+
+    ledit_1 = new QLineEdit(dlg);
+    ledit_2 = new QLineEdit(dlg);
+
+
+    QDialogButtonBox *btn_box = new QDialogButtonBox(dlg);
     btn_box->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
 
-    connect(btn_box, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    connect(btn_box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    connect(btn_box, &QDialogButtonBox::accepted, dlg, &QDialog::accept);
+    connect(btn_box, &QDialogButtonBox::rejected, dlg, &QDialog::reject);
 
     QFormLayout *layout = new QFormLayout();
-    layout->addRow(tr("SamplesNumber:"), ledit1);
-    layout->addRow(tr("SamplingRate:"), ledit2);
+    layout->addRow(tr("SamplesNumber:"), ledit_1);
+    layout->addRow(tr("SamplingRate:"), ledit_2);
     layout->addWidget(btn_box);
 
-    dlg.setLayout(layout);
+    dlg->setLayout(layout);
 
-    if(dlg.exec() == QDialog::Accepted) {
-        createdSamplesNumber = ledit1->text().toInt();
-        createdSamplingRate = ledit2->text().toDouble();
+
+    if(dlg->exec() == QDialog::Accepted ) {
+        createdSamplesNumber = ledit_1->text().toInt();
+        createdSamplingRate = ledit_2->text().toDouble();
 
         modelingDialog = new QDialog(this);
         modelingDialog->setWindowTitle(tr("Modeling"));
-        //modelingDialog->setGeometry(940,450,150,230);
 
         QStringList items;
         items << tr("Discretized sinusoid with given") << tr("Saw") << tr("Exponential Envelope")\
               << tr("Balanced Envelope Signal") << tr("Tonal Envelope")\
               << tr("Linear frequency") << tr("Discretized decreasing exponent");
-
-//        QString item = QInputDialog::getItem(this, "www.itmathrepetitor.ru",tr("Предмет:"),
-//                     items, 0, false, &ok);
-
 
         QComboBox* combobox = new QComboBox();
         combobox->addItems(items);
@@ -394,7 +394,96 @@ void MainWindow::on_actionModeling_triggered()
 
         modelingLayout->addWidget(btn_box1);
         modelingDialog->setLayout(modelingLayout);
-        modelingDialog->exec();
+        if(modelingDialog->exec() == QDialog::Accepted ) {
+            for (int i = 0; i < lines.length(); ++i){
+                datalines.append(lines[i]->text().toDouble());
+            }
+            QVector<double> modulationVecX;
+            for (int i = 0; i < createdSamplesNumber+1; ++i){
+                modulationVecX.append(i);
+            }
+
+            if (modelationIndex == 0){
+                QVector<double> modulationVecY;
+                for (int i = 0; i < createdSamplesNumber+1; ++i){
+                    modulationVecY.append(datalines[0]*sin(i*datalines[1]+datalines[2]));
+                }
+                if (mdi->subWindowList().length()<1){
+                    modelingWidget = new QWidget();
+                    modulationLayout = new QVBoxLayout();
+                    modelingWidget->setLayout(modulationLayout);
+
+
+                    modelationSub = mdi->addSubWindow(modelingWidget);
+                    modelationSub->setAttribute(Qt::WA_DeleteOnClose);
+                    modelationSub->setGeometry(QRect(5,5,675,420));
+                    modelationSub->setWindowTitle("Modulation");
+                    modelationSub->setContentsMargins(5,5,5,5);
+
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+
+                    modelationSub->show();
+            }else{
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+                }
+            }
+            if (modelationIndex == 1){
+                QVector<double> modulationVecY;
+                for (int i = 0; i < createdSamplesNumber+1; ++i){
+                    modulationVecY.append(i%static_cast<int>(datalines[0]));
+                }
+                if (mdi->subWindowList().length()<1){
+                    modelingWidget = new QWidget();
+                    modulationLayout = new QVBoxLayout();
+                    modelingWidget->setLayout(modulationLayout);
+
+                    modelationSub = mdi->addSubWindow(modelingWidget);
+                    modelationSub->setAttribute(Qt::WA_DeleteOnClose);
+                    modelationSub->setGeometry(QRect(5,5,675,420));
+                    modelationSub->setWindowTitle("Modulation");
+                    modelationSub->setContentsMargins(5,5,5,5);
+
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+
+                    modelationSub->show();
+            }else{
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+                }
+            }
+
+        }
     }
 }
 
@@ -407,120 +496,127 @@ void MainWindow::DefineFields(int a){
         }
     }
     if (a==6){
+        lines.clear();
         QLineEdit *ledit1 = new QLineEdit(modelingDialog);
-        QLineEdit *ledit2 = new QLineEdit(modelingDialog);
-        QLineEdit *ledit3 = new QLineEdit(modelingDialog);
         ledit1->setPlaceholderText("Insert 0<a<1");
-        ledit2->setPlaceholderText("Insert n>=0");
-        ledit3->setPlaceholderText("Pheriod");
         modelingLayout->addRow(ledit1);
-        modelingLayout->addRow(ledit2);
-        modelingLayout->addRow(ledit3);
         modelingFlag = 1;
+        lines.append(ledit1);
+        modelationIndex = 6;
     }
     if (a==0){
+        lines.clear();
         QLineEdit *ledit1 = new QLineEdit(modelingDialog);
         QLineEdit *ledit2 = new QLineEdit(modelingDialog);
         QLineEdit *ledit3 = new QLineEdit(modelingDialog);
-        QLineEdit *ledit4 = new QLineEdit(modelingDialog);
         ledit1->setPlaceholderText("Amplitude");
         ledit2->setPlaceholderText("Сircular frequency [0,pi]");
         ledit3->setPlaceholderText("Start phase [0,2pi]");
-        ledit4->setPlaceholderText("x(n)");
         modelingLayout->addRow(ledit1);
         modelingLayout->addRow(ledit2);
         modelingLayout->addRow(ledit3);
-        modelingLayout->addRow(ledit4);
-        QDialogButtonBox *btn_box1 = new QDialogButtonBox(modelingDialog);
-        btn_box1->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-
-        connect(btn_box1, &QDialogButtonBox::accepted, modelingDialog, &QDialog::accept);
-        connect(btn_box1, &QDialogButtonBox::rejected, modelingDialog, &QDialog::reject);
-
-        modelingLayout->addWidget(btn_box1);
         modelingFlag = 1;
+        lines.append(ledit1);
+        lines.append(ledit2);
+        lines.append(ledit3);
+        modelationIndex = 0;
     }
     if (a==1){
+        lines.clear();
         QLineEdit *ledit1 = new QLineEdit(modelingDialog);
         ledit1->setPlaceholderText("Period");
         modelingLayout->addRow(ledit1);
         modelingFlag = 1;
-
+        lines.append(ledit1);
+        modelationIndex = 1;
     }
     if (a==2){
-        QLineEdit *ledit1 = new QLineEdit(modelingDialog);
+        lines.clear();
         QLineEdit *ledit2 = new QLineEdit(modelingDialog);
         QLineEdit *ledit3 = new QLineEdit(modelingDialog);
         QLineEdit *ledit4 = new QLineEdit(modelingDialog);
         QLineEdit *ledit5 = new QLineEdit(modelingDialog);
-        ledit1->setPlaceholderText("x(t)");
         ledit3->setPlaceholderText("Amplitude");
         ledit4->setPlaceholderText("Envelope width");
         ledit5->setPlaceholderText("Сarrier frequency [0,0.5*SamplingRate]");
         ledit2->setPlaceholderText("Start carrier frequency");
-        modelingLayout->addRow(ledit1);
         modelingLayout->addRow(ledit3);
         modelingLayout->addRow(ledit4);
         modelingLayout->addRow(ledit5);
         modelingLayout->addRow(ledit2);
         modelingFlag = 1;
+        lines.append(ledit3);
+        lines.append(ledit4);
+        lines.append(ledit5);
+        lines.append(ledit2);
+        modelationIndex = 2;
     }
     if (a==3){
-        QLineEdit *ledit1 = new QLineEdit(modelingDialog);
+        lines.clear();
         QLineEdit *ledit2 = new QLineEdit(modelingDialog);
         QLineEdit *ledit3 = new QLineEdit(modelingDialog);
         QLineEdit *ledit4 = new QLineEdit(modelingDialog);
         QLineEdit *ledit5 = new QLineEdit(modelingDialog);
-        ledit1->setPlaceholderText("x(t)");
         ledit3->setPlaceholderText("Amplitude");
         ledit4->setPlaceholderText("Envelope frequency");
         ledit5->setPlaceholderText("Сarrier frequency");
         ledit2->setPlaceholderText("Start carrier frequency");
-        modelingLayout->addRow(ledit1);
         modelingLayout->addRow(ledit3);
         modelingLayout->addRow(ledit4);
         modelingLayout->addRow(ledit5);
         modelingLayout->addRow(ledit2);
         modelingFlag = 1;
+        lines.append(ledit3);
+        lines.append(ledit4);
+        lines.append(ledit5);
+        lines.append(ledit2);
+        modelationIndex = 3;
     }
     if (a==4){
-        QLineEdit *ledit1 = new QLineEdit(modelingDialog);
+        lines.clear();
         QLineEdit *ledit2 = new QLineEdit(modelingDialog);
         QLineEdit *ledit3 = new QLineEdit(modelingDialog);
         QLineEdit *ledit4 = new QLineEdit(modelingDialog);
         QLineEdit *ledit5 = new QLineEdit(modelingDialog);
         QLineEdit *ledit6 = new QLineEdit(modelingDialog);
-        ledit1->setPlaceholderText("x(t)");
         ledit6->setPlaceholderText("Modulation depth index");
         ledit3->setPlaceholderText("Amplitude");
         ledit4->setPlaceholderText("Envelope frequency");
         ledit5->setPlaceholderText("Сarrier frequency");
         ledit2->setPlaceholderText("Start carrier frequency");
-        modelingLayout->addRow(ledit1);
         modelingLayout->addRow(ledit6);
         modelingLayout->addRow(ledit3);
         modelingLayout->addRow(ledit4);
         modelingLayout->addRow(ledit5);
         modelingLayout->addRow(ledit2);
         modelingFlag = 1;
+        lines.append(ledit6);
+        lines.append(ledit3);
+        lines.append(ledit4);
+        lines.append(ledit5);
+        lines.append(ledit2);
+        modelationIndex = 4;
     }
     if (a==5){
-        QLineEdit *ledit1 = new QLineEdit(modelingDialog);
+        lines.clear();
         QLineEdit *ledit2 = new QLineEdit(modelingDialog);
         QLineEdit *ledit3 = new QLineEdit(modelingDialog);
         QLineEdit *ledit4 = new QLineEdit(modelingDialog);
         QLineEdit *ledit5 = new QLineEdit(modelingDialog);
-        ledit1->setPlaceholderText("x(t)");
         ledit3->setPlaceholderText("Amplitude");
         ledit4->setPlaceholderText("Start frequency");
         ledit5->setPlaceholderText("End frequency");
         ledit2->setPlaceholderText("Start phase");
-        modelingLayout->addRow(ledit1);
         modelingLayout->addRow(ledit3);
         modelingLayout->addRow(ledit4);
         modelingLayout->addRow(ledit5);
         modelingLayout->addRow(ledit2);
         modelingFlag = 1;
+        lines.append(ledit3);
+        lines.append(ledit4);
+        lines.append(ledit5);
+        lines.append(ledit2);
+        modelationIndex = 5;
     }
 
 }

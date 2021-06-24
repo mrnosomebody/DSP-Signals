@@ -42,6 +42,12 @@ private slots:
     void on_actionModeling_triggered();
 
 private:
+    int modelationIndex = -1;
+    QVector<QLineEdit*> lines;
+    QVector<double> datalines;
+    QLineEdit *ledit_1;
+    QLineEdit *ledit_2;
+    QDialog* dlg;
     bool modelingFlag;
     QDialog* modelingDialog;
     QFormLayout *modelingLayout;
@@ -52,6 +58,7 @@ private:
     Ui::MainWindow *ui;
     QMdiArea* mdi;
     QMdiSubWindow* sub;
+    QMdiSubWindow* modelationSub;
     QMdiSubWindow* sub_;
     Dialog* secwin;
     QVector <QString> str;
@@ -59,6 +66,8 @@ private:
     QCustomPlot* customPlot;
     QTableWidget *table;
     QWidget* o_widget;
+    QWidget* modelingWidget;
+    QVBoxLayout* modulationLayout;
     QVBoxLayout *o_layout_;
     QVector<Graph*> plots;
 };
