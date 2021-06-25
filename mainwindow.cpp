@@ -9,9 +9,17 @@
 #include <QMessageBox>
 #include <cmath>
 
+//int getRandomNumber(int min, int max)
+//{
+//    static const double fraction = 1.0 / (static_cast<double>(RAND_MAX) + 1.0);
+//    return static_cast<int>(rand() * fraction * (max - min + 1) + min);
+//}
+int getRandomNumber(int a, int b){
+   return (rand() % (b - a + 1) + a);
+}
+
 
 int counter = 0;
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -85,13 +93,12 @@ void MainWindow::on_actionOpen_triggered()
         sub->setContentsMargins(1,1,1,5);
         xStatic= QVector<double>(str[1].toInt());
         for (int i =0; i<str[1].toInt();++i){
-            xStatic[i] = i*str[2].toDouble();
+            xStatic[i] = i*(1/str[2].toDouble());
         }
 
         for (int i = 0; i<str[0].toInt();++i){
             MainWindow::OpenGraphics(i+6);
         }
-
         file.close();
         sub->show();
     }
@@ -378,7 +385,9 @@ void MainWindow::on_actionModeling_triggered()
         QStringList items;
         items << tr("Discretized sinusoid with given") << tr("Saw") << tr("Exponential Envelope")\
               << tr("Balanced Envelope Signal") << tr("Tonal Envelope")\
-              << tr("Linear frequency") << tr("Discretized decreasing exponent");
+              << tr("Linear frequency") << tr("Discretized decreasing exponent")<< tr("Meandr")\
+              << tr("Delayed single pulse") << tr("Delayed single blink")\
+              << tr("White Noise") << tr("Normal white noise") << tr("Random autoregression signal");
 
         QComboBox* combobox = new QComboBox();
         combobox->addItems(items);
@@ -395,12 +404,15 @@ void MainWindow::on_actionModeling_triggered()
         modelingLayout->addWidget(btn_box1);
         modelingDialog->setLayout(modelingLayout);
         if(modelingDialog->exec() == QDialog::Accepted ) {
+            datalines.clear();
             for (int i = 0; i < lines.length(); ++i){
                 datalines.append(lines[i]->text().toDouble());
+                //qDebug()<<lines[i]->text().toDouble();
             }
+            qDebug()<<datalines;
             QVector<double> modulationVecX;
             for (int i = 0; i < createdSamplesNumber+1; ++i){
-                modulationVecX.append(i);
+                modulationVecX.append(i*(1/createdSamplingRate));
             }
 
             if (modelationIndex == 0){
@@ -426,6 +438,10 @@ void MainWindow::on_actionModeling_triggered()
                     graph->yAxis->setTicks(true);
                     graph->xAxis->setTickLabels(true);
                     graph->yAxis->setTickLabels(true);
+                    graph->setInteraction(QCP::iRangeZoom,true);   // Включаем взаимодействие удаления/приближения
+                    graph->setInteraction(QCP::iRangeDrag, true);  // Включаем взаимодействие перетаскивания графика
+                    graph->axisRect()->setRangeDrag(Qt::Horizontal);   // Включаем перетаскивание только по горизонтальной оси
+                    graph->axisRect()->setRangeZoom(Qt::Horizontal);   // Включаем удаление/приближение только по горизонтальной оси
                     graph->addGraph()->setData(modulationVecX,modulationVecY);
                     graph->rescaleAxes();
                     modulationLayout->addWidget(graph);
@@ -482,6 +498,440 @@ void MainWindow::on_actionModeling_triggered()
                     modulationLayout->addWidget(graph);
                 }
             }
+            if (modelationIndex == 2){ // [0] - amplituda , [1] - wirina ogibayweu , [2] - chastota nesyweu , [3] - nachalnaya chastota
+                QVector<double> modulationVecY;
+                for (int i = 0; i < createdSamplesNumber+1; ++i){
+                    //modulationVecY.append(datalines[0]*exp(-i/datalines[1])*cos(2*3.14*datalines[2]*i+datalines[3])); /////РИСУЕТ НЕ ТО ПАЛЬТО
+                    modulationVecY.append(datalines[0]*pow(2.71,(-i/datalines[1]))*cos(2*M_PI*datalines[2]*i+datalines[3])); // ++ FIX экспоненциальная огибающая
+                }
+                if (mdi->subWindowList().length()<1){
+                    modelingWidget = new QWidget();
+                    modulationLayout = new QVBoxLayout();
+                    modelingWidget->setLayout(modulationLayout);
+
+                    modelationSub = mdi->addSubWindow(modelingWidget);
+                    modelationSub->setAttribute(Qt::WA_DeleteOnClose);
+                    modelationSub->setGeometry(QRect(5,5,675,420));
+                    modelationSub->setWindowTitle("Modulation");
+                    modelationSub->setContentsMargins(5,5,5,5);
+
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+
+                    modelationSub->show();
+            }else{
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+                }
+            }
+            if (modelationIndex == 3){
+                QVector<double> modulationVecY;
+                for (int i = 0; i < createdSamplesNumber+1; ++i){
+                    modulationVecY.append(datalines[0]*cos(2*3.14*datalines[1]*i)*cos(2*3.14*datalines[2]*i+datalines[3])); // ++ good
+                }
+                if (mdi->subWindowList().length()<1){
+                    modelingWidget = new QWidget();
+                    modulationLayout = new QVBoxLayout();
+                    modelingWidget->setLayout(modulationLayout);
+
+                    modelationSub = mdi->addSubWindow(modelingWidget);
+                    modelationSub->setAttribute(Qt::WA_DeleteOnClose);
+                    modelationSub->setGeometry(QRect(5,5,675,420));
+                    modelationSub->setWindowTitle("Modulation");
+                    modelationSub->setContentsMargins(5,5,5,5);
+
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+
+                    modelationSub->show();
+            }else{
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+                }
+            }
+            if (modelationIndex == 4){
+                QVector<double> modulationVecY;
+                for (int i = 0; i < createdSamplesNumber+1; ++i){
+                    modulationVecY.append(datalines[1]*(1+datalines[0]*cos(2*3.14*datalines[2]*i))*cos(2*3.14*datalines[3]*i+datalines[4])); // ++ good
+                }
+                if (mdi->subWindowList().length()<1){
+                    modelingWidget = new QWidget();
+                    modulationLayout = new QVBoxLayout();
+                    modelingWidget->setLayout(modulationLayout);
+
+                    modelationSub = mdi->addSubWindow(modelingWidget);
+                    modelationSub->setAttribute(Qt::WA_DeleteOnClose);
+                    modelationSub->setGeometry(QRect(5,5,675,420));
+                    modelationSub->setWindowTitle("Modulation");
+                    modelationSub->setContentsMargins(5,5,5,5);
+
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+
+                    modelationSub->show();
+            }else{
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+                }
+            }
+            if (modelationIndex == 5){
+                QVector<double> modulationVecY;
+                for (int i = 0; i < createdSamplesNumber+1; ++i){
+                    double t = 1;
+
+                    modulationVecY.append(datalines[0] * cos(2 * M_PI * (datalines[1] + (datalines[2] - datalines[1])/i*i)/i + datalines[3])); //////Почти но хуйня
+                }
+                if (mdi->subWindowList().length()<1){
+                    modelingWidget = new QWidget();
+                    modulationLayout = new QVBoxLayout();
+                    modelingWidget->setLayout(modulationLayout);
+
+                    modelationSub = mdi->addSubWindow(modelingWidget);
+                    modelationSub->setAttribute(Qt::WA_DeleteOnClose);
+                    modelationSub->setGeometry(QRect(5,5,675,420));
+                    modelationSub->setWindowTitle("Modulation");
+                    modelationSub->setContentsMargins(5,5,5,5);
+
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+
+                    modelationSub->show();
+            }else{
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+                }
+            }
+            if (modelationIndex == 7){ // че нахуй?
+                QVector<double> modulationVecY;
+                int j = static_cast<int>(datalines[0]);
+                for (int i = 1;i < createdSamplesNumber+1; ++i){
+                    if (i % j < j/2){
+                        modulationVecY.append(1);
+                    }
+                    else{
+                        modulationVecY.append(-1);
+                    }
+                }
+                if (mdi->subWindowList().length()<1){
+                    modelingWidget = new QWidget();
+                    modulationLayout = new QVBoxLayout();
+                    modelingWidget->setLayout(modulationLayout);
+
+                    modelationSub = mdi->addSubWindow(modelingWidget);
+                    modelationSub->setAttribute(Qt::WA_DeleteOnClose);
+                    modelationSub->setGeometry(QRect(5,5,675,420));
+                    modelationSub->setWindowTitle("Modulation");
+                    modelationSub->setContentsMargins(5,5,5,5);
+
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+
+                    modelationSub->show();
+            }else{
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+                }
+            }
+            if (modelationIndex == 8){
+                QVector<double> modulationVecY;
+                for (int i = 0; i < createdSamplesNumber+1; ++i){
+                    if (i == datalines[0]){
+                        modulationVecY.append(1);
+                    }
+                    else{
+                        modulationVecY.append(0);
+                    }
+                }
+
+                if (mdi->subWindowList().length()<1){
+                    modelingWidget = new QWidget();
+                    modulationLayout = new QVBoxLayout();
+                    modelingWidget->setLayout(modulationLayout);
+
+                    modelationSub = mdi->addSubWindow(modelingWidget);
+                    modelationSub->setAttribute(Qt::WA_DeleteOnClose);
+                    modelationSub->setGeometry(QRect(5,5,675,420));
+                    modelationSub->setWindowTitle("Modulation");
+                    modelationSub->setContentsMargins(5,5,5,5);
+
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+
+                    modelationSub->show();
+            }else{
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+                }
+            }
+            if (modelationIndex == 9){
+                QVector<double> modulationVecY;
+                for (int i = 0; i < createdSamplesNumber+1; ++i){
+                    if(i < datalines[0]){
+                        modulationVecY.append(0);
+                    }
+                    else{
+                        modulationVecY.append(1);
+                    }
+                }
+                if (mdi->subWindowList().length()<1){
+                    modelingWidget = new QWidget();
+                    modulationLayout = new QVBoxLayout();
+                    modelingWidget->setLayout(modulationLayout);
+
+                    modelationSub = mdi->addSubWindow(modelingWidget);
+                    modelationSub->setAttribute(Qt::WA_DeleteOnClose);
+                    modelationSub->setGeometry(QRect(5,5,675,420));
+                    modelationSub->setWindowTitle("Modulation");
+                    modelationSub->setContentsMargins(5,5,5,5);
+
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+
+                    modelationSub->show();
+            }else{
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+                }
+            }
+            if (modelationIndex == 10){
+                QVector<double> modulationVecY;
+
+                for (int i = 0; i < createdSamplesNumber+1; ++i){
+                   modulationVecY.append(datalines[0]+(datalines[1] - datalines[0])*getRandomNumber(datalines[0],datalines[1]));
+                }
+                if (mdi->subWindowList().length()<1){
+                    modelingWidget = new QWidget();
+                    modulationLayout = new QVBoxLayout();
+                    modelingWidget->setLayout(modulationLayout);
+
+                    modelationSub = mdi->addSubWindow(modelingWidget);
+                    modelationSub->setAttribute(Qt::WA_DeleteOnClose);
+                    modelationSub->setGeometry(QRect(5,5,675,420));
+                    modelationSub->setWindowTitle("Modulation");
+                    modelationSub->setContentsMargins(5,5,5,5);
+
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+
+                    modelationSub->show();
+            }else{
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+                }
+            }
+            if (modelationIndex == 11){
+                QVector<double> modulationVecY;
+                double sum = 0;
+                for (int i = 0; i < createdSamplesNumber+1; ++i){
+                    double sum = 0;
+                    for(int j = 0 ; j < 13; ++j){
+                        sum +=getRandomNumber(datalines[0],datalines[1]) - 6;
+                    }
+                    modulationVecY.append(datalines[0] + datalines[1]*sum);
+                }
+                if (mdi->subWindowList().length()<1){
+                    modelingWidget = new QWidget();
+                    modulationLayout = new QVBoxLayout();
+                    modelingWidget->setLayout(modulationLayout);
+
+                    modelationSub = mdi->addSubWindow(modelingWidget);
+                    modelationSub->setAttribute(Qt::WA_DeleteOnClose);
+                    modelationSub->setGeometry(QRect(5,5,675,420));
+                    modelationSub->setWindowTitle("Modulation");
+                    modelationSub->setContentsMargins(5,5,5,5);
+
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+
+                    modelationSub->show();
+            }else{
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+                }
+            }
+            if (modelationIndex == 12){
+                QVector<double> modulationVecY;
+                double sum = 0; // eto nado
+                double sum_1 = 0;
+                double sum_2 = 0;
+                double x_n = 0;
+                for (int i = 0; i < createdSamplesNumber+1; ++i){ // etot cycle toje nyjen
+                    double sum = 0;
+                    for(int j = 0 ; j < 13; ++j){
+                        sum +=getRandomNumber(0,datalines[0]*datalines[0]) - 6;
+                    }
+                    x_n = datalines[0] + datalines[1]*sum;
+
+
+
+                    for (int q;q <= datalines[2];++q){
+                        sum_1 =
+                    }
+
+                }
+
+                if (mdi->subWindowList().length()<1){
+                    modelingWidget = new QWidget();
+                    modulationLayout = new QVBoxLayout();
+                    modelingWidget->setLayout(modulationLayout);
+
+                    modelationSub = mdi->addSubWindow(modelingWidget);
+                    modelationSub->setAttribute(Qt::WA_DeleteOnClose);
+                    modelationSub->setGeometry(QRect(5,5,675,420));
+                    modelationSub->setWindowTitle("Modulation");
+                    modelationSub->setContentsMargins(5,5,5,5);
+
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+
+                    modelationSub->show();
+            }else{
+                    Graph* graph = new Graph();
+                    graph->setFixedHeight(200);
+                    graph->xAxis->setTicks(true);
+                    graph->yAxis->setTicks(true);
+                    graph->xAxis->setTickLabels(true);
+                    graph->yAxis->setTickLabels(true);
+                    graph->addGraph()->setData(modulationVecX,modulationVecY);
+                    graph->rescaleAxes();
+                    modulationLayout->addWidget(graph);
+                }
+            }
+
+
 
         }
     }
@@ -495,7 +945,7 @@ void MainWindow::DefineFields(int a){
             delete item;
         }
     }
-    if (a==6){
+    if (a==6){ // дискрет. убыв экспонента
         lines.clear();
         QLineEdit *ledit1 = new QLineEdit(modelingDialog);
         ledit1->setPlaceholderText("Insert 0<a<1");
@@ -504,7 +954,7 @@ void MainWindow::DefineFields(int a){
         lines.append(ledit1);
         modelationIndex = 6;
     }
-    if (a==0){
+    if (a==0){ // синусоида
         lines.clear();
         QLineEdit *ledit1 = new QLineEdit(modelingDialog);
         QLineEdit *ledit2 = new QLineEdit(modelingDialog);
@@ -521,7 +971,7 @@ void MainWindow::DefineFields(int a){
         lines.append(ledit3);
         modelationIndex = 0;
     }
-    if (a==1){
+    if (a==1){ // пила
         lines.clear();
         QLineEdit *ledit1 = new QLineEdit(modelingDialog);
         ledit1->setPlaceholderText("Period");
@@ -530,28 +980,28 @@ void MainWindow::DefineFields(int a){
         lines.append(ledit1);
         modelationIndex = 1;
     }
-    if (a==2){
+    if (a==2){ // экспоненциальная огибающая
         lines.clear();
         QLineEdit *ledit2 = new QLineEdit(modelingDialog);
         QLineEdit *ledit3 = new QLineEdit(modelingDialog);
         QLineEdit *ledit4 = new QLineEdit(modelingDialog);
         QLineEdit *ledit5 = new QLineEdit(modelingDialog);
-        ledit3->setPlaceholderText("Amplitude");
-        ledit4->setPlaceholderText("Envelope width");
-        ledit5->setPlaceholderText("Сarrier frequency [0,0.5*SamplingRate]");
-        ledit2->setPlaceholderText("Start carrier frequency");
+        ledit2->setPlaceholderText("Amplitude");
+        ledit3->setPlaceholderText("Envelope width");
+        ledit4->setPlaceholderText("Сarrier frequency");
+        ledit5->setPlaceholderText("Start carrier phase");
+        modelingLayout->addRow(ledit2);
         modelingLayout->addRow(ledit3);
         modelingLayout->addRow(ledit4);
         modelingLayout->addRow(ledit5);
-        modelingLayout->addRow(ledit2);
         modelingFlag = 1;
+        lines.append(ledit2);
         lines.append(ledit3);
         lines.append(ledit4);
         lines.append(ledit5);
-        lines.append(ledit2);
         modelationIndex = 2;
     }
-    if (a==3){
+    if (a==3){ // балансная огибающая
         lines.clear();
         QLineEdit *ledit2 = new QLineEdit(modelingDialog);
         QLineEdit *ledit3 = new QLineEdit(modelingDialog);
@@ -572,52 +1022,133 @@ void MainWindow::DefineFields(int a){
         lines.append(ledit2);
         modelationIndex = 3;
     }
-    if (a==4){
+    if (a==4){ // тональная огибающая
         lines.clear();
         QLineEdit *ledit2 = new QLineEdit(modelingDialog);
         QLineEdit *ledit3 = new QLineEdit(modelingDialog);
         QLineEdit *ledit4 = new QLineEdit(modelingDialog);
         QLineEdit *ledit5 = new QLineEdit(modelingDialog);
         QLineEdit *ledit6 = new QLineEdit(modelingDialog);
-        ledit6->setPlaceholderText("Modulation depth index");
+        ledit2->setPlaceholderText("Modulation depth index");
         ledit3->setPlaceholderText("Amplitude");
         ledit4->setPlaceholderText("Envelope frequency");
         ledit5->setPlaceholderText("Сarrier frequency");
-        ledit2->setPlaceholderText("Start carrier frequency");
-        modelingLayout->addRow(ledit6);
+        ledit6->setPlaceholderText("Start carrier frequency");
+        modelingLayout->addRow(ledit2);
         modelingLayout->addRow(ledit3);
         modelingLayout->addRow(ledit4);
         modelingLayout->addRow(ledit5);
-        modelingLayout->addRow(ledit2);
+        modelingLayout->addRow(ledit6);
         modelingFlag = 1;
-        lines.append(ledit6);
+        lines.append(ledit2);
         lines.append(ledit3);
         lines.append(ledit4);
         lines.append(ledit5);
-        lines.append(ledit2);
+        lines.append(ledit6);
         modelationIndex = 4;
     }
-    if (a==5){
+    if (a==5){ //линейная частотная модуляция ЛЧМ
         lines.clear();
-        QLineEdit *ledit2 = new QLineEdit(modelingDialog);
         QLineEdit *ledit3 = new QLineEdit(modelingDialog);
         QLineEdit *ledit4 = new QLineEdit(modelingDialog);
         QLineEdit *ledit5 = new QLineEdit(modelingDialog);
-        ledit3->setPlaceholderText("Amplitude");
-        ledit4->setPlaceholderText("Start frequency");
+        QLineEdit *ledit6 = new QLineEdit(modelingDialog);
+        ledit3->setPlaceholderText("Amplitude"); // +
+        ledit4->setPlaceholderText("Frequency at the initial moment t = 0"); //
         ledit5->setPlaceholderText("End frequency");
-        ledit2->setPlaceholderText("Start phase");
+        ledit6->setPlaceholderText("Initial phase");
         modelingLayout->addRow(ledit3);
         modelingLayout->addRow(ledit4);
         modelingLayout->addRow(ledit5);
-        modelingLayout->addRow(ledit2);
+        modelingLayout->addRow(ledit6);
         modelingFlag = 1;
         lines.append(ledit3);
         lines.append(ledit4);
         lines.append(ledit5);
-        lines.append(ledit2);
+        lines.append(ledit6);
         modelationIndex = 5;
     }
+    if (a==7){ // meandr
+        lines.clear();
+        QLineEdit *ledit3 = new QLineEdit(modelingDialog);
+        ledit3->setPlaceholderText("Pheriod L"); // +
+        modelingLayout->addRow(ledit3);
+        modelingFlag = 1;
+        lines.append(ledit3);
+        modelationIndex = 7;
+    }
+    if (a==8){ // Задержанный единичный импульс
+        lines.clear();
+        QLineEdit *ledit3 = new QLineEdit(modelingDialog);
+        ledit3->setPlaceholderText("Delayed single impulse"); // +
+        modelingLayout->addRow(ledit3);
+        modelingFlag = 1;
+        lines.append(ledit3);
+        modelationIndex = 8;
+    }
+    if (a==9){ // Задержаный еденичный скачок
+        lines.clear();
+        QLineEdit *ledit3 = new QLineEdit(modelingDialog);
+        ledit3->setPlaceholderText("Delayed single blink"); // +
+        modelingLayout->addRow(ledit3);
+        modelingFlag = 1;
+        lines.append(ledit3);
+        modelationIndex = 9;
+    }
+    if (a==10){ // Белый шум
+        lines.clear();
+        QLineEdit *ledit3 = new QLineEdit(modelingDialog);
+        QLineEdit *ledit4 = new QLineEdit(modelingDialog);
+        ledit3->setPlaceholderText("Bottom line"); // +
+        ledit4->setPlaceholderText("Top line");
+        modelingLayout->addRow(ledit3);
+        modelingLayout->addRow(ledit4);
+        modelingFlag = 1;
+        lines.append(ledit3);
+        lines.append(ledit4);
+        modelationIndex = 10;
+    }
+    if (a==11){ // Белый шум ,произвольная нормальная величина
+        lines.clear();
+        QLineEdit *ledit3 = new QLineEdit(modelingDialog);
+        QLineEdit *ledit4 = new QLineEdit(modelingDialog);
+        ledit3->setPlaceholderText("Middle value"); // +
+        ledit4->setPlaceholderText("Dispersion");
+        modelingLayout->addRow(ledit3);
+        modelingLayout->addRow(ledit4);
+        modelingFlag = 1;
+        lines.append(ledit3);
+        lines.append(ledit4);
+        modelationIndex = 11;
+    }
+    if (a==12){ // Случайный сигнал авторегрессии
+        lines.clear();
+        QLineEdit *ledit3 = new QLineEdit(modelingDialog);
+        QLineEdit *ledit4 = new QLineEdit(modelingDialog);
+        QLineEdit *ledit5 = new QLineEdit(modelingDialog);
+        QLineEdit *ledit6 = new QLineEdit(modelingDialog);
+        QLineEdit *ledit7 = new QLineEdit(modelingDialog);
+        ledit3->setPlaceholderText("Dispersion");
+        ledit4->setPlaceholderText("Insert P");
+        ledit5->setPlaceholderText("Insert Q");
+        ledit6->setPlaceholderText("Insert A(whitespace)");
+        ledit7->setPlaceholderText("Insert B(whitespace");
+
+        modelingLayout->addRow(ledit3);
+        modelingLayout->addRow(ledit4);
+        modelingLayout->addRow(ledit5);
+        modelingLayout->addRow(ledit6);
+        modelingLayout->addRow(ledit7);
+
+        modelingFlag = 1;
+        lines.append(ledit3);
+        lines.append(ledit4);
+        lines.append(ledit5);
+        lines.append(ledit6);
+        lines.append(ledit7);
+        modelationIndex = 12;
+    }
+
 
 }
 
